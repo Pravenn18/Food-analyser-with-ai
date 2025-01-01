@@ -4,9 +4,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 
 export default function HomeScreen() {
-  const [userData, setUserData] = useState<any>();
-  const calorieNeeds = userData.weight * 30;
-
   useEffect(() => {
     const getUserData = async () => {
       const userData = await getUserDetailsByPhone("1234567890");
@@ -14,14 +11,16 @@ export default function HomeScreen() {
     };
     getUserData();
   }, []);
-  console.log(userData);
+  const [userData, setUserData] = useState<any>();
+  const calorieNeeds = 30;
+  console.log("userData", JSON.stringify(userData));
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Your Daily Needs</Text>
       <View style={styles.card}>
         <Text>Calories: {calorieNeeds} kcal</Text>
-        <Text>Protein: {userData.weight * 2.2} g</Text>
+        <Text>Protein: {2.2} g</Text>
         <Text>Minerals: Sufficient daily intake</Text>
         <Text>Vitamins: Sufficient daily intake</Text>
       </View>
