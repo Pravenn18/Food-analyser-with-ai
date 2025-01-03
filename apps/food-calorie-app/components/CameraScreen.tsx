@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Image, ActivityIndicator, StyleSheet } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, Image, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { CameraView } from "expo-camera";
 import { VisionService } from "../services/VisionService";
 import { NutritionService } from "../services/NutritionService";
@@ -13,14 +13,13 @@ export default function CameraScreen() {
   const [loading, setLoading] = useState(false);
   const [cameraView, setCameraView] = useState<CameraView | null>(null);
   const [nutritionData, setNutritionData] = useState<NutritionInfo[]>([]);
-  const [isFood, setIsFood] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   const handleImageAnalysis = async (base64: string) => {
     const visionResponse = await VisionService.analyzeImage(base64);
     if (!visionResponse) return;
 
     const foodLabels = FoodDetectionUtils.extractFoodLabels(visionResponse);
-    setIsFood(foodLabels.length > 0);
 
     if (foodLabels.length > 0) {
       const nutritionPromises = foodLabels.map(async (label) => {
@@ -34,6 +33,7 @@ export default function CameraScreen() {
         (result): result is NutritionInfo => result !== null
       );
       setNutritionData(nutritionResults);
+      setShowResults(true);
     }
   };
 
@@ -58,17 +58,11 @@ export default function CameraScreen() {
     }
   };
 
-  const resetCamera = () => {
+  const resetCamera = useCallback(() => {
     setCapturedPhoto(null);
     setNutritionData([]);
-    setIsFood(false);
-  };
-
-  const toggleCameraFacing = () => {
-    if (cameraView) {
-      // cameraView.flipCamera();
-    }
-  };
+    setShowResults(false);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -81,7 +75,7 @@ export default function CameraScreen() {
           <View style={styles.overlay}>
             <CameraControls
               onCapture={capturePhoto}
-              onFlip={toggleCameraFacing}
+              onFlip={() => {}}
               loading={loading}
             />
           </View>
@@ -89,15 +83,16 @@ export default function CameraScreen() {
       ) : (
         <View style={styles.previewContainer}>
           <Image source={{ uri: capturedPhoto }} style={styles.capturedImage} />
-          {loading ? (
-            <ActivityIndicator size="large" color="#0000ff" />
-          ) : (
-            <NutritionResults
-              nutritionData={nutritionData}
-              onRetake={resetCamera}
-              isFood={isFood}
-            />
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0000ff" />
+            </View>
           )}
+          <NutritionResults
+            nutritionData={nutritionData}
+            onRetake={resetCamera}
+            isVisible={showResults}
+          />
         </View>
       )}
     </View>
@@ -118,10 +113,15 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     flex: 1,
-    backgroundColor: "#000",
   },
   capturedImage: {
     flex: 1,
     resizeMode: "contain",
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
 });
