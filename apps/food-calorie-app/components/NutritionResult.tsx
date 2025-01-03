@@ -5,100 +5,134 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Modal,
+  GestureResponderEvent,
 } from "react-native";
 import { NutritionInfo } from "../types";
 
 interface NutritionResultsProps {
   nutritionData: NutritionInfo[];
   onRetake: () => void;
-  isFood: boolean;
+  isVisible: boolean;
+}
+
+function addItemIntoDB(event: GestureResponderEvent): void {
+  throw new Error("Function not implemented.");
 }
 
 export const NutritionResults: React.FC<NutritionResultsProps> = ({
   nutritionData,
   onRetake,
-  isFood,
+  isVisible,
 }) => (
-  <ScrollView style={styles.resultsContainer}>
-    <View style={styles.detectionResults}>
-      {isFood ? (
-        <>
-          <Text style={styles.resultsTitle}>Food Analysis:</Text>
+  <Modal visible={isVisible} animationType="slide" transparent={true}>
+    <View style={styles.modalContainer}>
+      <View style={styles.modalContent}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Food Analysis</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={onRetake}>
+            <Text style={styles.closeText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.scrollContent}>
           {nutritionData.map((item, index) => (
-            <View key={index} style={styles.nutritionItem}>
-              <Text style={styles.resultText}>
-                {item.foodItem} ({Math.round(item.confidence * 100)}%
-                confidence)
+            <TouchableOpacity
+              key={index}
+              style={styles.nutritionItem}
+              onPress={addItemIntoDB}
+            >
+              <View style={styles.itemHeader}>
+                <Text style={styles.foodName}>{item.foodItem}</Text>
+                <Text style={styles.confidence}>
+                  {Math.round(item.confidence * 100)}%
+                </Text>
+              </View>
+              <Text style={styles.calories}>
+                {Math.round(item.calories)} kcal
               </Text>
-              <Text style={styles.calorieText}>
-                Calories: {Math.round(item.calories)} kcal
-              </Text>
-            </View>
+            </TouchableOpacity>
           ))}
-        </>
-      ) : (
-        <Text style={styles.resultText}>
-          No food items detected in the image
-        </Text>
-      )}
+
+          <TouchableOpacity style={styles.retakeButton} onPress={onRetake}>
+            <Text style={styles.retakeText}>Take Another Photo</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </View>
-    <TouchableOpacity style={styles.retakeButton} onPress={onRetake}>
-      <Text style={styles.retakeText}>Take Another Photo</Text>
-    </TouchableOpacity>
-  </ScrollView>
+  </Modal>
 );
 
 const styles = StyleSheet.create({
-  resultsContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    maxHeight: "50%",
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
-  detectionResults: {
+  modalContent: {
+    backgroundColor: "#1a1a1a",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    minHeight: "50%",
+    padding: 16,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
-  resultsTitle: {
-    fontSize: 18,
+  scrollContent: {
+    maxHeight: "80%",
+  },
+  title: {
+    fontSize: 24,
     fontWeight: "bold",
-    color: "white",
-    marginTop: 10,
-    marginBottom: 5,
+    color: "#fff",
   },
-  resultText: {
-    color: "white",
-    fontSize: 16,
-    marginBottom: 3,
+  closeButton: {
+    padding: 8,
   },
-  errorText: {
-    color: "red",
+  closeText: {
+    color: "#fff",
+    fontSize: 20,
+  },
+  nutritionItem: {
+    backgroundColor: "#2a2a2a",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  itemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  foodName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  confidence: {
+    fontSize: 14,
+    color: "#4CAF50",
+  },
+  calories: {
     fontSize: 16,
-    textAlign: "center",
+    color: "#4CAF50",
+    fontWeight: "500",
   },
   retakeButton: {
     backgroundColor: "#2196F3",
-    padding: 15,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 16,
+    marginBottom: 20,
   },
   retakeText: {
-    color: "white",
+    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  nutritionItem: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  calorieText: {
-    color: "#4CAF50",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 5,
   },
 });
