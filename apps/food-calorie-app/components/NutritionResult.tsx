@@ -10,20 +10,12 @@ import {
 import { NutritionInfo } from "../types";
 import { InputText } from "./InputText";
 import { Dropdown } from "./DropDown";
+import { addFoodIntoFoods } from "@/services/NutritionService";
 
 interface NutritionResultsProps {
   nutritionData: NutritionInfo[];
   onRetake: () => void;
   isVisible: boolean;
-}
-
-function addItemIntoDB(
-  item: NutritionInfo,
-  quantity: number,
-  mealType: string
-): void {
-  console.log("Adding item to DB:", { item, quantity, mealType });
-  // Implement database addition logic here.
 }
 
 export const NutritionResults: React.FC<NutritionResultsProps> = ({
@@ -37,11 +29,16 @@ export const NutritionResults: React.FC<NutritionResultsProps> = ({
   const [selectedMeals, setSelectedMeals] = useState<string[]>(
     new Array(nutritionData.length).fill("Breakfast")
   );
+  const [isButtonDisabled, setIsButtonDisabled] = useState<boolean[]>(
+    new Array(nutritionData.length).fill(false)
+  );
+
+  console.log("isButtonDisabled", JSON.stringify(isButtonDisabled));
+
   useEffect(() => {
     console.log("NutritionData length:", nutritionData.length);
     if (nutritionData.length > 0) {
-      setSelectedQuantities(new Array(nutritionData.length).fill(100));
-      setSelectedMeals(new Array(nutritionData.length).fill("Breakfast"));
+      setSelectedQuantities(nutritionData.map((x) => x.servingWeightGrams));
     }
   }, [nutritionData]);
   console.log("selectedQuantities", JSON.stringify(selectedQuantities));
@@ -60,6 +57,7 @@ export const NutritionResults: React.FC<NutritionResultsProps> = ({
 
   const calculateNutrients = (item: NutritionInfo, multiplier: number) => {
     // Ensure multiplier is a valid number and defaulting to 1 if invalid
+
     const safeMultiplier =
       !isNaN(multiplier) && multiplier > 0 ? multiplier : 1;
 
@@ -94,6 +92,41 @@ export const NutritionResults: React.FC<NutritionResultsProps> = ({
     }
   };
 
+  async function addItemIntoDB(
+    item: NutritionInfo,
+    quantity: number,
+    mealType: string,
+    index: any
+  ): Promise<void> {
+    setIsButtonDisabled((prev) => {
+      const newState = [...prev];
+      newState[index] = true;
+      return newState;
+    });
+    const multiplier = quantity / item.servingWeightGrams;
+    const foodItem = item.foodItem;
+    const calorie = item.calories * multiplier;
+    const protein = item.protein * multiplier;
+    const carbs = item.totalCarbohydrate * multiplier;
+    const fats = item.totalFat * multiplier;
+    const fiber = item.dietaryFiber * multiplier;
+    const sugars = item.sugars * multiplier;
+    const sodium = item.sodium * multiplier;
+    await addFoodIntoFoods(
+      "1234567890",
+      foodItem,
+      quantity,
+      calorie,
+      protein,
+      carbs,
+      fats,
+      fiber,
+      sugars,
+      sodium,
+      mealType
+    );
+  }
+
   return (
     <Modal visible={isVisible} animationType="slide" transparent={true}>
       <View style={styles.modalContainer}>
@@ -109,7 +142,7 @@ export const NutritionResults: React.FC<NutritionResultsProps> = ({
             {nutritionData.map((item, index) => {
               const nutrients = calculateNutrients(
                 item,
-                selectedQuantities[index] / 100
+                selectedQuantities[index] / item.servingWeightGrams
               );
               return (
                 <View key={index} style={styles.nutritionItem}>
@@ -150,6 +183,7 @@ export const NutritionResults: React.FC<NutritionResultsProps> = ({
                       }
                       keyboardType="numeric"
                       label="Quantity (g)"
+                      isDisabled={isButtonDisabled[index]}
                     />
                     <Dropdown
                       options={[
@@ -161,17 +195,23 @@ export const NutritionResults: React.FC<NutritionResultsProps> = ({
                       onValueChange={(value) =>
                         updateField(index, value, setSelectedMeals)
                       }
+                      isDisabled={isButtonDisabled[index]}
                     />
                   </View>
                   <TouchableOpacity
-                    style={styles.addButton}
+                    style={[
+                      styles.addButton,
+                      isButtonDisabled[index] && { backgroundColor: "grey" },
+                    ]}
                     onPress={() =>
                       addItemIntoDB(
                         item,
                         selectedQuantities[index],
-                        selectedMeals[index]
+                        selectedMeals[index],
+                        index
                       )
                     }
+                    disabled={isButtonDisabled[index]}
                   >
                     <Text style={styles.addButtonText}>Add Dish</Text>
                   </TouchableOpacity>
