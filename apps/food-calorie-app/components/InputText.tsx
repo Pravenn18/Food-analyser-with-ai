@@ -8,6 +8,7 @@ interface InputTextProps {
   keyboardType?: "default" | "numeric" | "email-address";
   style?: object;
   label?: string;
+  isDisabled: boolean;
 }
 
 export const InputText: React.FC<InputTextProps> = ({
@@ -17,6 +18,7 @@ export const InputText: React.FC<InputTextProps> = ({
   keyboardType = "default",
   style,
   label,
+  isDisabled,
 }) => {
   const displayValue = value?.toString() || "";
   return (
@@ -25,6 +27,7 @@ export const InputText: React.FC<InputTextProps> = ({
       <TextInput
         style={styles.input}
         value={displayValue}
+        editable={!isDisabled}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#aaa"
