@@ -8,6 +8,7 @@ interface DropdownProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   style?: object;
+  isDisabled: boolean;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -16,6 +17,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   onValueChange,
   placeholder,
   style,
+  isDisabled,
 }) => {
   return (
     <View style={[styles.dropdownContainer, style]}>
@@ -24,6 +26,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         selectedValue={selectedValue}
         onValueChange={onValueChange}
         style={styles.picker}
+        enabled={!isDisabled}
       >
         {options.map((option, index) => (
           <Picker.Item key={index} label={option.label} value={option.value} />
