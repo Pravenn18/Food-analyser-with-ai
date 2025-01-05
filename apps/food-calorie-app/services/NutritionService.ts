@@ -1,6 +1,8 @@
 import axios from "axios";
 import { NutritionInfo } from "../types";
 import { CONFIG } from "@/constants/Index";
+import { supabase } from "@/utils/supabase";
+import { getUserIdByPhone } from "./userService";
 
 export class NutritionService {
   static async fetchNutritionInfo(
@@ -19,7 +21,6 @@ export class NutritionService {
           },
         }
       );
-      console.log("response", JSON.stringify(response));
       return this.parseResponse(response.data);
     } catch (error) {
       console.error("Error fetching nutrition info:", error);
@@ -58,3 +59,45 @@ export class NutritionService {
     return null;
   }
 }
+
+export const addFoodIntoFoods = async (
+  phone: string,
+  food_name: string,
+  weight: number,
+  calorie: number,
+  protein: number,
+  carbs: number,
+  fats: number,
+  fiber: number,
+  sugars: number,
+  sodium: number,
+  mealType: string
+) => {
+  const mealId = await addMeal(phone, mealType);
+  const { data, error } = await supabase.from("food").upsert({
+    meal_id: mealId.data?.id,
+    food_name,
+    weight,
+    calorie,
+    protein,
+    carbs,
+    fats,
+    fiber,
+    sugars,
+    sodium,
+  });
+  return { data, error };
+};
+
+export const addMeal = async (phone: string, mealType: string) => {
+  const userId = await getUserIdByPhone(phone);
+  const { data, error } = await supabase
+    .from("meals")
+    .upsert({
+      name: mealType,
+      user_id: userId.data?.id,
+    })
+    .select("id")
+    .single();
+  return { data, error };
+};
