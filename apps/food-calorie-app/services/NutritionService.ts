@@ -101,3 +101,57 @@ export const addMeal = async (phone: string, mealType: string) => {
     .single();
   return { data, error };
 };
+
+export const getMealsIdByUserIdForToday = async (phone: string) => {
+  const userId = await getUserIdByPhone(phone);
+  console.log("userId", JSON.stringify(userId.data?.id));
+
+  const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+
+  const { data, error } = await supabase
+    .from("meals")
+    .select("id")
+    .eq("user_id", userId.data?.id)
+    .filter("created_at", "gte", `${today}T00:00:00.000Z`) // Start of today
+    .filter("created_at", "lt", `${today}T23:59:59.999Z`); // End of today
+
+  if (error) {
+    console.error("Error fetching meal IDs:", error.message);
+  } else {
+    console.log("Meal IDs for today:", JSON.stringify(data));
+  }
+
+  return { data, error };
+};
+
+export const fetchFoodByUserIdForToday = async (phone: string) => {
+  const { data: mealIds, error: mealError } =
+    await getMealsIdByUserIdForToday(phone);
+  if (mealError) {
+    console.error("Error fetching meal IDs:", mealError.message);
+    return { data: null, error: mealError };
+  }
+
+  if (!mealIds || mealIds.length === 0) {
+    console.log("No meals found for today.");
+    return { data: [], error: null };
+  }
+
+  // Extract IDs from the result
+  const mealIdArray = mealIds.map((meal) => meal.id);
+  console.log("mealIdArray", JSON.stringify(mealIdArray));
+
+  // Fetch all food entries for the given meal IDs
+  const { data, error } = await supabase
+    .from("food")
+    .select("*")
+    .in("meal_id", mealIdArray); // Use `in` to match multiple meal IDs
+
+  if (error) {
+    console.error("Error fetching food data:", error.message);
+  } else {
+    console.log("Food data for today:", JSON.stringify(data));
+  }
+
+  return { data, error };
+};
