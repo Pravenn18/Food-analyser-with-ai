@@ -1,27 +1,109 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Animated,
   ScrollView,
-  Dimensions,
   TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Easing } from "react-native-reanimated";
+import { fetchFoodByUserIdForToday } from "@/services/NutritionService";
+import { GroupedMeal, Meal, NutrientItem, NutrientTotals } from "@/types";
 
-const { width } = Dimensions.get("window");
-
-// TODO: optimise code by using animated from reanimated
 export default function HomeScreen() {
+  const [foodData, setFoodData] = useState<Meal[]>([]);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnim = React.useRef(new Animated.Value(0.95)).current;
   const rotateAnim = React.useRef(new Animated.Value(0)).current;
   const cameraButtonAnim = React.useRef(new Animated.Value(1)).current;
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+  const calculateTotalNutrients = (): NutrientTotals => {
+    return foodData.reduce(
+      (acc: NutrientTotals, item: Meal) => {
+        return {
+          calories: acc.calories + parseFloat(item.calorie),
+          protein: acc.protein + parseFloat(item.protein),
+          carbs: acc.carbs + parseFloat(item.carbs),
+          fats: acc.fats + parseFloat(item.fats),
+        };
+      },
+      { calories: 0, protein: 0, carbs: 0, fats: 0 }
+    );
+  };
+
+  const totals = calculateTotalNutrients();
+
+  const nutrients: NutrientItem[] = [
+    {
+      icon: "fire",
+      title: "Calories",
+      value: totals.calories.toFixed(0),
+      unit: "kcal",
+      target: "2,000",
+      color: "#FF6B6B",
+    },
+    {
+      icon: "food-steak",
+      title: "Protein",
+      value: totals.protein.toFixed(1),
+      unit: "g",
+      target: "80",
+      color: "#4ECDC4",
+    },
+    {
+      icon: "bread-slice",
+      title: "Carbs",
+      value: totals.carbs.toFixed(1),
+      unit: "g",
+      target: "250",
+      color: "#FFD93D",
+    },
+    {
+      icon: "oil",
+      title: "Fats",
+      value: totals.fats.toFixed(1),
+      unit: "g",
+      target: "65",
+      color: "#95A5A6",
+    },
+  ];
+
+  // Group meals by meal_id
+  const groupMealsByTime = (): GroupedMeal[] => {
+    const meals = foodData.reduce(
+      (acc: Record<string, GroupedMeal>, item: Meal) => {
+        const mealTime = getMealTime(item.created_at);
+        if (!acc[mealTime]) {
+          acc[mealTime] = {
+            time: mealTime,
+            calories: 0,
+            items: [],
+          };
+        }
+        acc[mealTime].calories += parseFloat(item.calorie);
+        acc[mealTime].items.push(item.food_name);
+        return acc;
+      },
+      {}
+    );
+
+    return Object.values(meals);
+  };
+
+  const getMealTime = (created_at: string): string => {
+    const hour = new Date(created_at).getHours();
+    if (hour < 11) return "Breakfast";
+    if (hour < 16) return "Lunch";
+    if (hour < 20) return "Dinner";
+    return "Snack";
+  };
+
+  const mealHistory = groupMealsByTime();
 
   React.useEffect(() => {
     Animated.loop(
@@ -51,54 +133,6 @@ export default function HomeScreen() {
     ).start();
   }, []);
 
-  const nutrients = [
-    {
-      icon: "fire",
-      title: "Calories",
-      value: "1,200",
-      unit: "kcal",
-      target: "2,000",
-      color: "#FF6B6B",
-    },
-    {
-      icon: "food-steak",
-      title: "Protein",
-      value: "50",
-      unit: "g",
-      target: "80",
-      color: "#4ECDC4",
-    },
-    {
-      icon: "bread-slice",
-      title: "Carbs",
-      value: "150",
-      unit: "g",
-      target: "250",
-      color: "#FFD93D",
-    },
-    {
-      icon: "oil",
-      title: "Fats",
-      value: "45",
-      unit: "g",
-      target: "65",
-      color: "#95A5A6",
-    },
-  ];
-
-  const mealHistory = [
-    { time: "Breakfast", calories: 350, items: "Oatmeal, Banana, Coffee" },
-    { time: "Lunch", calories: 550, items: "Grilled Chicken Salad, Apple" },
-    { time: "Snack", calories: 300, items: "Greek Yogurt, Almonds" },
-  ];
-
-  const getTimeOfDay = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Morning";
-    if (hour < 17) return "Afternoon";
-    return "Evening";
-  };
-
   React.useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -115,12 +149,34 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    async function fetchFood() {
+      try {
+        const response = await fetchFoodByUserIdForToday("1234567890");
+        if (response?.data) {
+          setFoodData(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching food data:", error);
+      }
+    }
+    fetchFood();
+  }, []);
+
+  console.log("foodData", JSON.stringify(foodData));
+  const getTimeOfDay = (): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Morning";
+    if (hour < 17) return "Afternoon";
+    return "Evening";
+  };
+
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "360deg"],
   });
 
-  const handleCameraPress = () => {
+  const handleCameraPress = (): void => {
     Animated.sequence([
       Animated.timing(cameraButtonAnim, {
         toValue: 0.8,
@@ -136,7 +192,14 @@ export default function HomeScreen() {
     ]).start();
   };
 
-  const renderNutrientCard = ({ icon, title, value, unit, target, color }) => (
+  const renderNutrientCard = ({
+    icon,
+    title,
+    value,
+    unit,
+    target,
+    color,
+  }: NutrientItem) => (
     <Animated.View
       key={title}
       style={[
@@ -148,7 +211,7 @@ export default function HomeScreen() {
       ]}
     >
       <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
-        <MaterialCommunityIcons name={icon} size={24} color={color} />
+        <MaterialCommunityIcons name={icon as any} size={24} color={color} />
       </View>
       <View style={styles.nutrientInfo}>
         <Text style={styles.nutrientTitle}>{title}</Text>
@@ -207,7 +270,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>Today's Meals</Text>
             {mealHistory.map((meal, index) => (
               <Animated.View
-                key={meal.time}
+                key={`${meal.time}-${index}`}
                 style={[
                   styles.mealCard,
                   {
@@ -231,9 +294,11 @@ export default function HomeScreen() {
               >
                 <View style={styles.mealHeader}>
                   <Text style={styles.mealTime}>{meal.time}</Text>
-                  <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+                  <Text style={styles.mealCalories}>
+                    {meal.calories.toFixed(0)} kcal
+                  </Text>
                 </View>
-                <Text style={styles.mealItems}>{meal.items}</Text>
+                <Text style={styles.mealItems}>{meal.items.join(", ")}</Text>
               </Animated.View>
             ))}
           </View>
@@ -272,7 +337,7 @@ export default function HomeScreen() {
               ]}
             >
               <LinearGradient
-                colors={["#FF6B6B", "#4ECDC4"]}
+                colors={["#434343", "#000000"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.cameraButtonGradient}
@@ -301,7 +366,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: "rgba(255, 255, 255, 0.1)", // Optional semi-transparent background
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     marginBottom: 10,
