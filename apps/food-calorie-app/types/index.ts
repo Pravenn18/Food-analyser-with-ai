@@ -37,6 +37,7 @@ export interface Meal {
   fats: string;
   weight: string;
   created_at: string;
+  meal_id: string;
 }
 
 export interface NutrientItem {
