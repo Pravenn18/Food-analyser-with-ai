@@ -155,3 +155,22 @@ export const fetchFoodByUserIdForToday = async (phone: string) => {
 
   return { data, error };
 };
+
+export const getMealTypeByMealIdForToday = async (mealId: string) => {
+  const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+
+  const { data, error } = await supabase
+    .from("meals")
+    .select("name")
+    .eq("id", mealId)
+    .filter("created_at", "gte", `${today}T00:00:00.000Z`) // Start of today
+    .filter("created_at", "lt", `${today}T23:59:59.999Z`); // End of today
+
+  if (error) {
+    console.error("Error fetching meal IDs:", error.message);
+  } else {
+    console.log("Meal Type for today:", JSON.stringify(data));
+  }
+
+  return data;
+};
