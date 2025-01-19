@@ -27,3 +27,36 @@ export interface VisionResponse {
     score: number;
   }>;
 }
+
+export interface Meal {
+  id: string;
+  food_name: string;
+  calorie: string;
+  protein: string;
+  carbs: string;
+  fats: string;
+  weight: string;
+  created_at: string;
+}
+
+export interface NutrientItem {
+  icon: string;
+  title: string;
+  value: string;
+  unit: string;
+  target: string;
+  color: string;
+}
+
+export interface GroupedMeal {
+  time: string;
+  calories: number;
+  items: string[];
+}
+
+export interface NutrientTotals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
