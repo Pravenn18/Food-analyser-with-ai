@@ -11,7 +11,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Easing } from "react-native-reanimated";
-import { fetchFoodByUserIdForToday } from "@/services/NutritionService";
+import {
+  fetchFoodByUserIdForToday,
+  getMealTypeByMealIdForToday,
+} from "@/services/NutritionService";
 import { GroupedMeal, Meal, NutrientItem, NutrientTotals } from "@/types";
 
 export default function HomeScreen() {
@@ -73,37 +76,58 @@ export default function HomeScreen() {
     },
   ];
 
-  // Group meals by meal_id
-  const groupMealsByTime = (): GroupedMeal[] => {
-    const meals = foodData.reduce(
-      (acc: Record<string, GroupedMeal>, item: Meal) => {
-        const mealTime = getMealTime(item.created_at);
-        if (!acc[mealTime]) {
-          acc[mealTime] = {
-            time: mealTime,
-            calories: 0,
-            items: [],
-          };
-        }
-        acc[mealTime].calories += parseFloat(item.calorie);
-        acc[mealTime].items.push(item.food_name);
-        return acc;
-      },
-      {}
-    );
+  const [mealHistory, setMealHistory] = useState<GroupedMeal[]>([]);
+  useEffect(() => {
+    const loadMealHistory = async () => {
+      if (foodData.length > 0) {
+        const groupedMeals = await groupMealsByTime();
+        setMealHistory(groupedMeals);
+      }
+    };
 
-    return Object.values(meals);
+    loadMealHistory();
+  }, [foodData]);
+
+  const groupMealsByTime = async (): Promise<GroupedMeal[]> => {
+    try {
+      const tempMeals: Record<string, GroupedMeal> = {};
+      await Promise.all(
+        foodData.map(async (item: Meal) => {
+          const mealTime = await getMealTime(item.meal_id);
+
+          if (!tempMeals[mealTime]) {
+            tempMeals[mealTime] = {
+              time: mealTime,
+              calories: 0,
+              items: [],
+            };
+          }
+
+          tempMeals[mealTime].calories += parseFloat(item.calorie);
+          tempMeals[mealTime].items.push(item.food_name);
+        })
+      );
+
+      // Sort meals in chronological order
+      const mealOrder = ["Breakfast", "Lunch", "Dinner", "Snack", "Other"];
+      return Object.values(tempMeals).sort(
+        (a, b) => mealOrder.indexOf(a.time) - mealOrder.indexOf(b.time)
+      );
+    } catch (error) {
+      console.error("Error grouping meals:", error);
+      return [];
+    }
   };
 
-  const getMealTime = (created_at: string): string => {
-    const hour = new Date(created_at).getHours();
-    if (hour < 11) return "Breakfast";
-    if (hour < 16) return "Lunch";
-    if (hour < 20) return "Dinner";
-    return "Snack";
+  const getMealTime = async (mealId: string): Promise<string> => {
+    try {
+      const mealTime = await getMealTypeByMealIdForToday(mealId);
+      return mealTime?.[0]?.name || "Other";
+    } catch (error) {
+      console.error("Error getting meal type:", error);
+      return "Other";
+    }
   };
-
-  const mealHistory = groupMealsByTime();
 
   React.useEffect(() => {
     Animated.loop(
